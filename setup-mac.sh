@@ -1,128 +1,114 @@
 #!/bin/bash
 
-# ==============================================================================
-# Salesforce MCP Server Setup Script for macOS & Linux (v2)
-# ==============================================================================
-# This script automates the entire setup and configuration process:
-# 1. Checks for Git and Node.js.
-# 2. Clones or updates the sf-mcp-server repository.
-# 3. Installs dependencies and builds the project.
-# 4. Automatically finds and updates the 'claude_desktop_config.json' file.
-# ==============================================================================
+# This script automates the setup of a custom MCP server for Claude Desktop on macOS/Linux.
+# It performs the following steps:
+# 1. Checks if Node.js, Git, and jq are installed.
+# 2. Creates a directory at ~/sf-mcp.
+# 3. Clones the sf-mcp-test repository from GitHub.
+# 4. Installs the npm dependencies globally.
+# 5. Updates the Claude Desktop configuration file with the new server path.
 
-# --- CONFIGURATION ---
-REPO_URL="https://github.com/exon-sohan/exon-sf-mcp.git" # <-- IMPORTANT: CHANGE THIS
-REPO_DIR="sf-mcp-server"
-SERVER_NAME="sf-mcp-server"
-CLAUDE_CONFIG_PATH="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+# --- Define Colors for Output ---
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-# --- STYLING ---
-bold=$(tput bold)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-red=$(tput setaf 1)
-reset=$(tput sgr0)
+# --- Step 1: Check for Prerequisites ---
 
-log_step() { echo ""; echo "${bold}${yellow}--- $1 ---${reset}"; }
-log_success() { echo "${bold}${green}✔ $1${reset}"; }
-log_error() { echo "${bold}${red}✖ ERROR: $1${reset}"; }
+echo -e "${CYAN}Checking for prerequisites (Node.js, Git, and jq)...${NC}"
 
-# --- DEPENDENCY CHECKS ---
-log_step "Step 1: Checking Dependencies"
-command -v git &> /dev/null || { log_error "Git not found. Please install it from https://git-scm.com/"; exit 1; }
-command -v node &> /dev/null || { log_error "Node.js not found. Please install it from https://nodejs.org/"; exit 1; }
-log_success "Git and Node.js are installed."
-
-# --- GIT OPERATIONS ---
-log_step "Step 2: Getting Source Code"
-if [ -d "$REPO_DIR" ]; then
-  echo "Directory '$REPO_DIR' found. Pulling latest changes..."
-  cd "$REPO_DIR" || exit
-  git pull || { log_error "Git pull failed."; exit 1; }
-else
-  echo "Cloning repository..."
-  git clone "$REPO_URL" "$REPO_DIR" || { log_error "Git clone failed."; exit 1; }
-  cd "$REPO_DIR" || exit
+# Check for Node.js
+if ! command -v node &> /dev/null; then
+    echo -e "${RED}Error: Node.js not found. Please install it to continue. Exiting script.${NC}" >&2
+    exit 1
 fi
-log_success "Source code is up to date."
+node_path=$(command -v node)
+echo -e "${GREEN}Node.js found at: $node_path${NC}"
 
-# --- BUILD PROJECT ---
-log_step "Step 3: Installing Dependencies and Building"
-npm install || { log_error "npm install failed."; exit 1; }
-npm run build || { log_error "npm run build failed."; exit 1; }
-log_success "Project built successfully."
+# Check for Git
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}Error: Git not found. Please install it to continue. Exiting script.${NC}" >&2
+    exit 1
+fi
+echo -e "${GREEN}Git found.${NC}"
 
-# --- CONFIGURE CLAUDE DESKTOP ---
-log_step "Step 4: Configuring Claude Desktop"
-SERVER_ENTRY_POINT="$(pwd)/build/index.js"
+# Check for jq
+if ! command -v jq &> /dev/null; then
+    echo -e "${RED}Error: 'jq' is not found. It is required for JSON manipulation.${NC}" >&2
+    echo -e "${YELLOW}Please install it using your package manager (e.g., 'brew install jq' on macOS or 'sudo apt-get install jq' on Debian/Ubuntu).${NC}" >&2
+    exit 1
+fi
+echo -e "${GREEN}jq found.${NC}"
 
-# Check if the entry point file exists
-if [ ! -f "$SERVER_ENTRY_POINT" ]; then
-    log_error "Build artifact not found at '$SERVER_ENTRY_POINT'. Check your build process."
+# --- Step 2: Set up the Project Directory ---
+
+base_dir="$HOME/sf-mcp"
+repo_name="sf-mcp-test"
+full_repo_path="$base_dir/$repo_name"
+
+echo -e "${CYAN}Creating directory: $base_dir${NC}"
+mkdir -p "$base_dir"
+cd "$base_dir" || { echo -e "${RED}Error: Could not change to directory $base_dir. Exiting.${NC}" >&2; exit 1; }
+
+# --- Step 3: Clone the Repository ---
+
+if [ ! -d "$full_repo_path" ]; then
+    echo -e "${CYAN}Cloning repository 'https://github.com/exon-sohan/sf-mcp-test.git'...${NC}"
+    if ! git clone https://github.com/exon-sohan/sf-mcp-test.git; then
+        echo -e "${RED}Error: Failed to clone the repository. Please check your internet connection and Git settings. Exiting script.${NC}" >&2
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}Repository directory '$repo_name' already exists. Skipping clone.${NC}"
+fi
+
+
+# --- Step 4: Install Dependencies ---
+
+echo -e "${CYAN}Changing to repository directory and installing npm dependencies globally...${NC}"
+cd "$full_repo_path" || { echo -e "${RED}Error: Could not change to directory $full_repo_path. Exiting.${NC}" >&2; exit 1; }
+
+if ! npm install -g; then
+    echo -e "${RED}Error: Failed to install npm dependencies. Exiting script.${NC}" >&2
     exit 1
 fi
 
-# Create Claude directory if it doesn't exist
-mkdir -p "$(dirname "$CLAUDE_CONFIG_PATH")"
-# Create config file if it doesn't exist
-touch "$CLAUDE_CONFIG_PATH"
+# --- Step 5: Update Claude Desktop Configuration ---
 
-# Use Node.js to safely parse and update the JSON file. This is more reliable than sed/awk.
-node -e "
-const fs = require('fs');
-const path = require('path');
+echo -e "${CYAN}Updating Claude Desktop configuration file...${NC}"
 
-const configFile = '$CLAUDE_CONFIG_PATH';
-const serverName = '$SERVER_NAME';
-const serverEntryPoint = '$SERVER_ENTRY_POINT';
+claude_config_path="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+claude_config_dir=$(dirname "$claude_config_path")
 
-let config = {};
-try {
-    const rawData = fs.readFileSync(configFile, 'utf8');
-    if (rawData) {
-        config = JSON.parse(rawData);
-    }
-} catch (e) {
-    console.error('Could not parse existing config file. Starting fresh.');
-    config = {};
-}
+# Ensure the config directory exists
+mkdir -p "$claude_config_dir"
 
-if (!config.mcpServers) {
-    config.mcpServers = {};
-}
+# Check if the config file exists; if not, create it
+if [ ! -f "$claude_config_path" ]; then
+    echo -e "${YELLOW}Claude Desktop configuration file not found. Creating a new one.${NC}"
+    echo "{}" > "$claude_config_path"
+fi
 
-config.mcpServers[serverName] = {
-    command: 'node',
-    args: [serverEntryPoint]
-};
+# Path to the server's main script
+server_script_path="$full_repo_path/build/index.js"
 
-try {
-    fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
-    console.log('SUCCESS'); // Signal success to the shell script
-} catch (e) {
-    console.error('Failed to write updated config file:', e);
-    process.exit(1);
-}
-" > update_result.log 2>&1
-
-if grep -q "SUCCESS" update_result.log; then
-    log_success "Claude Desktop configuration updated successfully."
-    rm update_result.log
+# Use jq to safely update the JSON file
+# This command adds/updates .mcpServers."sf-mcp-server" with the new configuration
+# It saves to a temporary file first to prevent corruption on error
+temp_file=$(mktemp)
+if jq \
+  --arg cmd "$node_path" \
+  --argjson args "[\"$server_script_path\"]" \
+  '.mcpServers."sf-mcp-server" = {command: $cmd, args: $args}' \
+  "$claude_config_path" > "$temp_file"; then
+    mv "$temp_file" "$claude_config_path"
 else
-    log_error "Failed to update Claude Desktop configuration. See details below:"
-    cat update_result.log
-    rm update_result.log
+    echo -e "${RED}Error: Failed to update the JSON configuration file with jq. Please check the file's contents. Exiting script.${NC}" >&2
+    rm "$temp_file"
     exit 1
 fi
 
-# --- FINAL INSTRUCTIONS ---
-echo ""
-echo "${bold}${green}=========================================${reset}"
-echo "${bold}${green}    SETUP COMPLETE! 🎉${reset}"
-echo "${bold}${green}=========================================${reset}"
-echo ""
-echo "The '$SERVER_NAME' has been successfully configured for Claude Desktop."
-echo ""
-echo "${bold}Next Step: Please completely QUIT and RESTART the Claude Desktop application.${reset}"
-echo "You should see the '${SERVER_NAME}' available in the UI."
-echo ""
+echo -e "${GREEN}Setup complete!${NC}"
+echo -e "${GREEN}The sf-mcp-server has been added to your Claude Desktop configuration.${NC}"
