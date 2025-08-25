@@ -23,7 +23,7 @@ This is the recommended method for all users. The setup script handles everythin
 4.  Run the script with the following command:
 
     ```bash
-    chmod +x setup-mac.sh
+    sudo chmod +x setup-mac.sh
     ```
 
     ```bash
@@ -35,10 +35,24 @@ This is the recommended method for all users. The setup script handles everythin
 1.  Download the `setup-windows.ps1` script.
 2.  Right-click on the script file.
 3.  Select **"Run with PowerShell"**.
-    - _Note: If you encounter an error about execution policies, you may need to open PowerShell as an Administrator and run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`, then try again._
+    - Note: If you encounter an error about execution policies, you may need to open PowerShell as an Administrator and run
+    ```bash
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+    ```
+    then try again.
 
 ## How to Update
 
 To get the latest tools and features, simply **re-run the same setup script** you used for the initial installation. It will automatically pull the latest changes and rebuild the project for you.
 
----
+## Some Examples
+
+create a object naming Person
+it will have few fields naming
+Name,age,Id and there will another object Department and where there will be two fields PersonId and Department name and the PersonId should be a foreign key of Id of Person in exonuat org
+
+make a salesforce custom object naming 'property' and the fields will be have named as Property ID – Unique identifier for the listing. Title/Headline – Brief description (e.g., "3BHK Luxury Apartment in Downtown"). Property Type – Apartment, Villa, Plot, Commercial, etc. Status – For Sale, For Rent, Under Construction, Sold, etc. Location – Address, City, State, Zip Code, Landmark. Neighborhood/Society Name – If part of a gated community or complex. Price – Listed price (may include currency). Price per Sq. Ft. – Helps compare property value. do this in exonuat org
+
+make a apex class which will insert 10 example records to the object 'Property\_\_c’ in exonuat org
+
+there is a aura named Customer_WrapperComponent retrieve this class from bcsit and bcuat and make a report what is difference in the code between both the codes if you dont get the exact apex class name then search in manifest file and get the closely related class
