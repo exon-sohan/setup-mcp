@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script automates the setup of a custom MCP server for Claude Desktop on macOS/Linux.
+# This script automates the setup of a custom MCP server for Claude Desktop on macOS/Linux
 # It performs the following steps:
 # 1. Checks if Node.js, Git, and jq are installed.
 # 2. Creates a directory at ~/sf-mcp.

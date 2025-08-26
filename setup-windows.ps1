@@ -1,4 +1,4 @@
-# This script automates the setup of a custom MCP server for Claude Desktop.
+# This script automates the setup of a custom MCP server for Claude Desktop
 # It performs the following steps:
 # 1. Checks if Node.js and Git are installed.
 # 2. Creates a directory at C:\sf-mcp.
